@@ -9,3 +9,10 @@ pom.xml
 /.env
 *.log
 
+# repl
+.nrepl-port
+
+#emacs
+*~
+[#]*[#]
+.\#*
