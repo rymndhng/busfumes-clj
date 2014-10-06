@@ -1,7 +1,8 @@
 (defproject chat "0.1.0-SNAPSHOT"
   :description "Clojure based webapp for Busfumes"
   :url "http://www.github.com/rymndhng/busfumes-clj"
-  :repl-options {:init-ns chat.repl}
+  :repl-options {:welcome (println "Welcome to the magical world of the busfumes repl!")
+                 :init-ns chat.repl}
   :dependencies [[ring-server "0.3.1"]
                  [domina "1.0.2"]
                  [com.novemberain/monger "1.7.0"]
@@ -21,6 +22,8 @@
                  [compojure "1.1.6"]
                  [selmer "0.6.6"]
                  [lib-noir "0.8.2"]]
+  :global-vars {*print-length* 100 ; prevent long prints from gacking
+                }
   :cljsbuild {:builds
               [{:source-paths ["src-cljs"],
                 :compiler
