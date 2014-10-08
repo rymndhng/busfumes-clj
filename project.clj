@@ -12,6 +12,8 @@
                  [prismatic/dommy "0.1.2"]
                  [org.clojure/clojurescript "0.0-2197"]
                  [org.clojure/clojure "1.6.0"]
+                 [org.clojure/data.xml "0.0.8"]
+                 [org.clojure/data.zip "0.1.1"]
                  [com.taoensso/tower "2.0.2"]
                  [com.keminglabs/c2 "0.2.3"]
                  [log4j "1.2.17" :exclusions [javax.mail/mail
