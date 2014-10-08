@@ -2,24 +2,28 @@
   (:require [clojure.data.xml :as xml]
             [clojure.zip :as zip]
             [clojure.data.zip.xml :as zx]
-            [clojure.java.io :as io])
-  (:use clojure.test))
+            [clojure.java.io :as io]))
 
+;; TODO: implement this!
 (defn generate-svg
   "Given a KML file, generates a SVG for drawing on the frontend with
   blended with bus stops."
   [kmlfile])
 
 
-(defn kmz-to-map
-  "Takes a kmz file and extracts the bus information as a map."
-  [zipfile]
-  (let [entry (first (enumeration-seq (.entries zipfile)))
-        stream (.getInputStream zipfile entry)]
-    (xml/parse stream)))
+(defn zipfile-streams
+  "Takes a zipfile, and returns a lazy collection of the input
+  streams.
 
+  Users are expected to close the returned input streams."
+  ([zipfile] (zipfile-streams zipfile (enumeration-seq (.entries zipfile))))
+  ([zipfile entries]
+     (if (empty? entries)
+       (empty entries)
+       (cons (apply xml/parse #(.getInputStream zipfile %) first entries)
+             (lazy-seq (zipfile-streams zipfile (rest entries)))))))
 
-(defn extract-path
+(defn extract-bus-path
   "Given a ziplist from our KML, extract the coordinate nodes and
   flatten into a clojure list."
   [ziplist]
@@ -29,45 +33,34 @@
     (map (comp :content zip/node) coords)))
 
 
-(def get-points-from-kml-map
-  "Takes a kml map and retrieves the coordinates in a list."
-  (comp extract-path zip/xml-zip kmz-to-map))
+(defn retrieve-resource
+  "Retrives the contents to a temporary file unless it already exists
+  in the filesystem. Returns the file handle"
+  [path-to-contents]
+  (let [file (clojure.java.io/file path-to-contents)]
+    (if (.exists file)
+      ;; simply return the file if it exists
+      file
 
-;;; Reading from a variety of sources
+      ;; otherwise create a temporary file
+      (let [tmpfile (java.io.File/createTempFile "busfumes" ".kmz")]
+        (with-open [reader (clojure.java.io/input-stream path-to-contents)
+                    writer (clojure.java.io/output-stream tmpfile)]
+          (clojure.java.io/copy reader writer))
+        tmpfile))))
 
-(def )
-
-;; scratch for reading files off the web
-(with-open [stream (clojure.java.io/input-stream
-                    "http://nb.translink.ca/geodata/trip/027-NB5.kmz")
-            zipStream (java.util.zip.ZipInputStream. stream)]
-  (let [entry (.getNextEntry zipStream)
-        file ]))
-
-(def zipfile
-  (with-open [rdr (clojure.java.io/reader "http://nb.translink.ca/geodata/trip/027-NB5.kmz")
-              zipStream (java.util.zip.ZipInputStream. rdr)]
-    ()
-    ))
-
-(def zipfile
-  (java.util.zip.ZipFile. (clojure.java.io/as-url
-                           )))
-                                        ;
-Some tests
-(def testfile "/Users/rayh/Downloads/027-NB5.kmz")
-(def contents (slurp testfile))
-;; not ideal this loads an entire string... then what (?)
+;;; Should Retrive 971 bytes
+;; (retrieve-path-to-tmpfile "http://nb.translink.ca/geodata/trip/027-NB5.kmz")
 
 
-;;; Try using java inter-op for reading zips
-(def zipfile (java.util.zip.ZipFile. "/Users/rayh/Downloads/027-NB5.kmz"))
+;;; Expose this as a public method
+(defn get-points-from-kmz-map
+  "Takes a path to a kmz, taking the first (and hopefully only entry)
+  and retrieves the coordinates in a list."
+  [path]
+  (with-open [stream (first (-> (retrieve-resource path)
+                                 java.util.zip.ZipFile.
+                                 zipfile-streams))]
+    (-> stream xml/parse zip/xml-zip extract-bus-path)))
 
-
-                                        ;(def testkmz (java.util.zip.ZipFile. kmzfile))
-
-(deftest kmz_equal
-  (is (= 2 (+ 1 1))) "2 is 1 plus 1")
-
-
-                                        ; (run-tests 'chat.map)
+;; (get-points-from-kml-map "http://nb.translink.ca/geodata/trip/027-NB5.kmz")
